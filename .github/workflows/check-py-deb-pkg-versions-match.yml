@@ -1,0 +1,80 @@
+name: Check py deb pkg versions match
+on:
+  workflow_call:
+    inputs:
+      debian_changelog_file_path:
+        description: Path for the Debian changelog file
+        required: false
+        default: "debian/changelog"
+        type: string
+      python_version_file_path:
+        description: Path for the Python package __version__.py file
+        required: true
+        type: string
+jobs:
+  check-version:
+    name: check version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check if ${{ inputs.python_version_file_path }} exists
+        run: |
+          if [ ! -f "${{ inputs.python_version_file_path }}" ]; then
+            echo "Error: ${{ inputs.python_version_file_path }} not found"
+            echo "Error: Python packages are expected to have a __version__.py file."
+            exit 1
+          fi
+
+      - name: Extract Version from Debian Changelog
+        id: extract-version
+        run: |
+          DEB_VERSION=$(head -n 1 debian/changelog | sed -E 's/.*\(([^)]+)\).*/\1/')
+          if [ -z "$DEB_VERSION" ]; then
+            echo "Error: failed to parse or find version on the first line of debian/changelog"
+            exit 1
+          fi
+          # Strip the debian revision (e.g., -1) for Python package version
+          PY_COMPAT_DEB_VERSION=$(echo $DEB_VERSION | sed -E 's/-.*//')
+          if [ -z "$PY_COMPAT_DEB_VERSION" ]; then
+            echo "Error: failed to set PY_COMPAT_DEB_VERSION from DEB_VERSION"
+            exit 1
+          fi
+          echo "DEB_VERSION=$DEB_VERSION" >> $GITHUB_ENV
+          echo "Debian package version: $DEB_VERSION"
+          echo "PY_COMPAT_DEB_VERSION=$PY_COMPAT_DEB_VERSION" >> $GITHUB_ENV
+          echo "Python compatible debian version: $PY_COMPAT_DEB_VERSION"
+
+      - name: Check if Debian version is valid
+        run: |
+          debian_version_regex='^(\d+!)?[0-9][A-Za-z0-9.\+~:-]*(?:-[A-Za-z0-9.\+~]+)?$'
+          if ! echo "$DEB_VERSION" | grep -Eq "$debian_version_regex"; then
+            echo "Error: Invalid Debian version format detected: $DEB_VERSION"
+            exit 1
+          else
+            echo "Debian package version: $DEB_VERSION"
+          fi
+
+      - name: Get Python package version
+        run: |
+          CURRENT_PY_VERSION=$(grep -oP '__version__\s*=\s*["'\'']\K(.*?)(?=["'\''])' ${{ inputs.python_version_file_path }})
+
+          if [ -z "$CURRENT_PY_VERSION" ]; then
+            echo "Error: current Python package version at ${{ inputs.python_version_file_path }} is an empty string."
+            exit 1
+          fi
+          echo "Python package version: $CURRENT_PY_VERSION"
+          echo "CURRENT_PY_VERSION=$CURRENT_PY_VERSION" >> $GITHUB_ENV
+
+      - name: Fail if ${{ inputs.python_version_file_path }} needs update
+        id: check-version
+        run: |
+          if [ "$CURRENT_PY_VERSION" != "$PY_COMPAT_DEB_VERSION" ]; then
+            echo "Compatible Python package version parsed from ${{ inputs.debian_changelog_file_path }}: $PY_COMPAT_DEB_VERSION"
+            echo "Current version detected from ${{ inputs.python_version_file_path }}: $CURRENT_PY_VERSION"
+            echo "Error: most recent debian/changelog and ${{ inputs.python_version_file_path }} versions do not match."
+            exit 1
+          else
+            echo "Versions match. Let's go."
+          fi

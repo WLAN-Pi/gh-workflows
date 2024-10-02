@@ -1,0 +1,55 @@
+name: Get formatted version string
+on:
+  workflow_call:
+    inputs:
+      debian_changelog_file_path:
+        description: Path for the Debian changelog file
+        required: false
+        default: "debian/changelog"
+        type: string
+    outputs:
+      version:
+        description: "Formatted version string for use in a filename path"
+        value: ${{ jobs.get_formatted_version_string.outputs.version }}
+jobs:
+  get_formatted_version_string:
+    name: get formatted version string
+    outputs:
+      version: ${{ steps.format.outputs.version }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract Version from Debian Changelog
+        id: extract-version
+        run: |
+          DEB_VERSION=$(head -n 1 debian/changelog | sed -E 's/.*\(([^)]+)\).*/\1/')
+          if [ -z "$DEB_VERSION" ]; then
+            echo "Error: failed to parse or find version on the first line of debian/changelog"
+            exit 1
+          fi
+          echo "DEB_VERSION=$DEB_VERSION" >> $GITHUB_ENV
+          echo "Debian package version: $DEB_VERSION"
+
+      - name: Check if Debian version is valid
+        run: |
+          debian_version_regex='^(\d+!)?[0-9][A-Za-z0-9.\+~:-]*(?:-[A-Za-z0-9.\+~]+)?$'
+          if ! echo "$DEB_VERSION" | grep -Eq "$debian_version_regex"; then
+            echo "Error: Invalid Debian version format detected: $DEB_VERSION"
+            exit 1
+          else
+            echo "Debian package version: $DEB_VERSION"
+          fi
+
+      - name: Format version for filenames and write to output
+        id: format
+        run: |
+          remove_unsafe_filename_characters=$(echo "$DEB_VERSION" | sed -E 's/[\/:*?"<>| ]/_/g' | sed 's/\.$//')
+          echo "File name friendly debian version number: $remove_unsafe_filename_characters"
+          echo "version=$remove_unsafe_filename_characters" >> "$GITHUB_OUTPUT"
+          echo "version=$remove_unsafe_filename_characters" >> "$GITHUB_ENV"
+
+      - name: Debug output from format
+        run: |
+          echo "'format' output: $version"
