@@ -27,7 +27,7 @@ jobs:
             exit 1
           fi
 
-      - name: Extract Version from Debian Changelog
+      - name: Extract Version from Debian changelog
         id: extract-version
         run: |
           DEB_VERSION=$(head -n 1 debian/changelog | sed -E 's/.*\(([^)]+)\).*/\1/')
@@ -44,7 +44,7 @@ jobs:
           echo "DEB_VERSION=$DEB_VERSION" >> $GITHUB_ENV
           echo "Debian package version: $DEB_VERSION"
           echo "PY_COMPAT_DEB_VERSION=$PY_COMPAT_DEB_VERSION" >> $GITHUB_ENV
-          echo "Python compatible debian version: $PY_COMPAT_DEB_VERSION"
+          echo "Formatted Python version: $PY_COMPAT_DEB_VERSION"
 
       - name: Check if Debian version is valid
         run: |
@@ -61,7 +61,7 @@ jobs:
           CURRENT_PY_VERSION=$(grep -oP '__version__\s*=\s*["'\'']\K(.*?)(?=["'\''])' ${{ inputs.python_version_file_path }})
 
           if [ -z "$CURRENT_PY_VERSION" ]; then
-            echo "Error: current Python package version at ${{ inputs.python_version_file_path }} is an empty string."
+            echo "Error: current Python package `__version__` value at ${{ inputs.python_version_file_path }} is an empty string."
             exit 1
           fi
           echo "Python package version: $CURRENT_PY_VERSION"
