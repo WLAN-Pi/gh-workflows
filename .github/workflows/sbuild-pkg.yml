@@ -4,22 +4,31 @@ on:
     inputs:
       distro:
         description: distro for the package
-        required: true
+        required: false
+        default: [bullseye,bookworm]
         type: string
       arch:
         description: architecture for the package
-        required: true
+        required: false
+        default: [arm64]
         type: string
       pkg:
         description: pkg name 
         required: true
         type: string
       version:
-        description: version for the pkg 
+        description: version for the pkg
+        required: true
+        type: string
 jobs:
   sbuild-pkg:
     name: sbuild package
     runs-on: "${{ vars.RUNS_ON || 'ubuntu-22.04' }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: ${{ inputs.distro }}
+        arch: ${{ inputs.arch }}
     steps:
       - name: Check if inputs all exist and are not empty
         run: |
