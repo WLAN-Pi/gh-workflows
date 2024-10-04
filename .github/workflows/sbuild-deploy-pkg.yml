@@ -14,6 +14,7 @@ jobs:
   sbuild-deploy-pkg:
     name: sbuild deploy pkg
     runs-on: ubuntu-latest
+    environment: PACKAGECLOUD
     strategy:
       fail-fast: false
       matrix:
