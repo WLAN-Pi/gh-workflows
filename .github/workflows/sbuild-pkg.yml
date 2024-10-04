@@ -22,18 +22,6 @@ jobs:
     steps:
       - name: Check if inputs all exist and are not empty
         run: |
-          if [ -z "${{ inputs.distro }}" ]; then
-            echo "Error: distro string is empty"
-            exit 1
-          else:
-            echo "distro is "${{ inputs.distro }}"
-          fi
-          if [ -z "${{ inputs.arch }}" ]; then
-            echo "Error: arch string is empty"
-            exit 1
-          else:
-            echo "arch is "${{ inputs.arch }}"
-          fi
           if [ -z "${{ inputs.pkg }}" ]; then
             echo "Error: pkg string is empty"
             exit 1
