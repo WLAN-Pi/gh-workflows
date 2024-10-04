@@ -10,9 +10,6 @@ on:
         description: version for the pkg
         required: true
         type: string
-    secrets:
-      pkgcloudtoken:
-        required: true
 jobs:
   sbuild-deploy-pkg:
     name: sbuild deploy pkg
@@ -64,7 +61,7 @@ jobs:
           packagecloud-username: wlanpi
           packagecloud-repo: dev
           packagecloud-distrib: raspbian/${{ matrix.distro }}
-          packagecloud-token: ${{ secrets.pkgcloudtoken }}
+          packagecloud-token: ${{ secrets.PACKAGECLOUD_TOKEN }}
       - name: Upload arm64 pkg to debian/${{ matrix.distro }}
         if: ${{ matrix.arch == 'arm64' && (github.repository_owner == 'WLAN-Pi') }}
         uses: danielmundi/upload-packagecloud@main
@@ -73,4 +70,4 @@ jobs:
           packagecloud-username: wlanpi
           packagecloud-repo: dev
           packagecloud-distrib: debian/${{ matrix.distro }}
-          packagecloud-token: ${{ secrets.pkgcloudtoken }}
+          packagecloud-token: ${{ secrets.PACKAGECLOUD_TOKEN }}
