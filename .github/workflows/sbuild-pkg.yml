@@ -5,12 +5,12 @@ on:
       distro:
         description: distro for the package
         required: false
-        default: "[bullseye,bookworm]"
+        default: [bullseye,bookworm]
         type: string
       arch:
         description: architecture for the package
         required: false
-        default: "[arm64]"
+        default: [arm64]
         type: string
       pkg:
         description: pkg name 
