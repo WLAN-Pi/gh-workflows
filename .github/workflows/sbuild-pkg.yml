@@ -1,0 +1,68 @@
+name: sbuild-pkg
+on:
+  workflow_call:
+    inputs:
+      distro:
+        description: distro for the package
+        required: true
+        type: string
+      arch:
+        description: architecture for the package
+        required: true
+        type: string
+      pkg:
+        description: pkg name 
+        required: true
+        type: string
+      version:
+        description: version for the pkg 
+jobs:
+  sbuild-pkg:
+    name: sbuild package
+    runs-on: "${{ vars.RUNS_ON || 'ubuntu-22.04' }}"
+    steps:
+      - name: Check if inputs all exist and are not empty
+        run: |
+          if [ -z "${{ inputs.distro }}" ]; then
+            echo "Error: distro string is empty"
+            exit 1
+          else:
+            echo "distro is "${{ inputs.distro }}"
+          fi
+          if [ -z "${{ inputs.arch }}" ]; then
+            echo "Error: arch string is empty"
+            exit 1
+          else:
+            echo "arch is "${{ inputs.arch }}"
+          fi
+          if [ -z "${{ inputs.pkg }}" ]; then
+            echo "Error: pkg string is empty"
+            exit 1
+          else:
+            echo "pkg is "${{ inputs.pkg }}"
+          fi
+          if [ -z "${{ inputs.version }}" ]; then
+            echo "Error: version string is empty"
+            exit 1
+          else:
+            echo "Version is "${{ inputs.version }}"
+          fi
+      - name: Get current date
+        id: date
+        run: echo "date=$(date -u +'%Y%m%d')" >> $GITHUB_ENV
+      - name: Set package filename
+        run: |
+          echo "filename=${{ inputs.pkg }}_${{ inputs.version }}~gha${{ env.date }}+${{ inputs.arch }}_${{ inputs.distro }}" >> $GITHUB_ENV
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: sbuild deb pkg for ${{ inputs.distro }}+${{ inputs.arch }}
+        uses: wlan-pi/sbuild-debian-package@main
+        id: build-debian-package
+        with:
+          distro: ${{ inputs.distro }}
+          arch: ${{ inputs.arch }}
+      - name: Archive artifacts and upload to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.filename }}
+          path: ${{ steps.build-debian-package.outputs.deb-package }}
