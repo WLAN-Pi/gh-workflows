@@ -1,16 +1,16 @@
-name: sbuild-pkg
+name: sbuild pkg
 on:
   workflow_call:
     inputs:
       distro:
         description: distro for the package
         required: false
-        default: [bullseye,bookworm]
+        default: "[bullseye,bookworm]"
         type: string
       arch:
         description: architecture for the package
         required: false
-        default: [arm64]
+        default: "[arm64]"
         type: string
       pkg:
         description: pkg name 
@@ -22,8 +22,8 @@ on:
         type: string
 jobs:
   sbuild-pkg:
-    name: sbuild package
-    runs-on: "${{ vars.RUNS_ON || 'ubuntu-22.04' }}"
+    name: sbuild pkg
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
