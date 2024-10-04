@@ -39,15 +39,15 @@ jobs:
         run: echo "date=$(date -u +'%Y%m%d')" >> $GITHUB_ENV
       - name: Set package filename
         run: |
-          echo "filename=${{ inputs.pkg }}_${{ inputs.version }}~gha${{ env.date }}+${{ inputs.arch }}_${{ inputs.distro }}" >> $GITHUB_ENV
+          echo "filename=${{ inputs.pkg }}_${{ inputs.version }}~gha${{ env.date }}+${{ matrix.arch }}_${{ matrix.distro }}" >> $GITHUB_ENV
       - name: Checkout
         uses: actions/checkout@v4
-      - name: sbuild deb pkg for ${{ inputs.distro }}+${{ inputs.arch }}
+      - name: sbuild deb pkg for ${{ matrix.distro }}+${{ matrix.arch }}
         uses: wlan-pi/sbuild-debian-package@main
         id: build-debian-package
         with:
-          distro: ${{ inputs.distro }}
-          arch: ${{ inputs.arch }}
+          distro: ${{ matrix.distro }}
+          arch: ${{ matrix.arch }}
       - name: Archive artifacts and upload to GitHub
         uses: actions/upload-artifact@v4
         with:
