@@ -1,0 +1,76 @@
+name: sbuild deploy pkg
+on:
+  workflow_call:
+    inputs:
+      pkg:
+        description: pkg name 
+        required: true
+        type: string
+      version:
+        description: version for the pkg
+        required: true
+        type: string
+    secrets:
+      pkgcloudtoken:
+        required: true
+jobs:
+  sbuild-deploy-pkg:
+    name: sbuild deploy pkg
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [bullseye,bookworm]
+        arch: [arm64]
+    steps:
+      - name: Check if inputs all exist and are not empty
+        run: |
+          if [ -z "${{ inputs.pkg }}" ]; then
+            echo "Error: pkg string is empty"
+            exit 1
+          else:
+            echo "pkg is "${{ inputs.pkg }}"
+          fi
+          if [ -z "${{ inputs.version }}" ]; then
+            echo "Error: version string is empty"
+            exit 1
+          else:
+            echo "Version is "${{ inputs.version }}"
+          fi
+      - name: Get current date
+        id: date
+        run: echo "date=$(date -u +'%Y%m%d')" >> $GITHUB_ENV
+      - name: Set package filename
+        run: |
+          echo "filename=${{ inputs.pkg }}_${{ inputs.version }}~gha${{ env.date }}+${{ matrix.arch }}_${{ matrix.distro }}" >> $GITHUB_ENV
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: sbuild deb pkg for ${{ matrix.distro }}+${{ matrix.arch }}
+        uses: wlan-pi/sbuild-debian-package@main
+        id: build-debian-package
+        with:
+          distro: ${{ matrix.distro }}
+          arch: ${{ matrix.arch }}
+      - name: Archive artifacts and upload to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.filename }}
+          path: ${{ steps.build-debian-package.outputs.deb-package }}
+      - name: Upload armhf pkg to raspbian/${{ matrix.distro }}
+        if: ${{ matrix.arch == 'armhf' && (github.repository_owner == 'WLAN-Pi') }}
+        uses: danielmundi/upload-packagecloud@main
+        with:
+          package-name: ${{ steps.build-debian-package.outputs.deb-package }}
+          packagecloud-username: wlanpi
+          packagecloud-repo: dev
+          packagecloud-distrib: raspbian/${{ matrix.distro }}
+          packagecloud-token: ${{ secrets.pkgcloudtoken }}
+      - name: Upload arm64 pkg to debian/${{ matrix.distro }}
+        if: ${{ matrix.arch == 'arm64' && (github.repository_owner == 'WLAN-Pi') }}
+        uses: danielmundi/upload-packagecloud@main
+        with:
+          package-name: ${{ steps.build-debian-package.outputs.deb-package }}
+          packagecloud-username: wlanpi
+          packagecloud-repo: dev
+          packagecloud-distrib: debian/${{ matrix.distro }}
+          packagecloud-token: ${{ secrets.pkgcloudtoken }}
