@@ -16,7 +16,7 @@ jobs:
     name: get formatted version string
     outputs:
       version: ${{ steps.format.outputs.version }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
