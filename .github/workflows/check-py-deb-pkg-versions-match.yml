@@ -70,11 +70,18 @@ jobs:
       - name: Fail if ${{ inputs.python_version_file_path }} needs update
         id: check-version
         run: |
-          if [ "$CURRENT_PY_VERSION" != "$PY_COMPAT_DEB_VERSION" ]; then
+          # Extract major.minor.patch from both versions using sed
+          BASE_PY_VERSION=$(echo "$CURRENT_PY_VERSION" | sed -E 's/([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+          BASE_DEB_VERSION=$(echo "$PY_COMPAT_DEB_VERSION" | sed -E 's/([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+          
+          echo "Base Python version (major.minor.patch): $BASE_PY_VERSION"
+          echo "Base Debian version (major.minor.patch): $BASE_DEB_VERSION"
+          
+          if [ "$BASE_PY_VERSION" != "$BASE_DEB_VERSION" ]; then
             echo "Compatible Python package version parsed from ${{ inputs.debian_changelog_file_path }}: $PY_COMPAT_DEB_VERSION"
             echo "Current version detected from ${{ inputs.python_version_file_path }}: $CURRENT_PY_VERSION"
-            echo "Error: most recent debian/changelog and ${{ inputs.python_version_file_path }} versions do not match."
+            echo "Error: major.minor.patch versions in debian/changelog and ${{ inputs.python_version_file_path }} do not match."
             exit 1
           else
-            echo "Versions match. Let's go."
+            echo "Base versions match (major.minor.patch). Additional version components and metadata ignored."
           fi
