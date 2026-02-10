@@ -10,6 +10,11 @@ on:
         description: version for the pkg
         required: true
         type: string
+      distros:
+        description: 'JSON array of distros to build (e.g., ["bullseye"] or ["bullseye","bookworm"])'
+        required: false
+        type: string
+        default: '["bullseye","bookworm","trixie"]'
 jobs:
   sbuild-pkg:
     name: sbuild pkg
@@ -17,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        distro: [bullseye,bookworm,trixie]
+        distro: ${{ fromJSON(inputs.distros) }}
         arch: [arm64]
     steps:
       - name: Check if inputs all exist and are not empty
