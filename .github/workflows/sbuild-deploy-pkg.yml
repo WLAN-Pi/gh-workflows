@@ -14,7 +14,7 @@ on:
         description: 'JSON array of distros to build (e.g., ["bullseye"] or ["bullseye","bookworm"])'
         required: false
         type: string
-        default: '["bullseye","bookworm","trixie"]'
+        default: '["trixie"]'
 jobs:
   sbuild-deploy-pkg:
     name: sbuild deploy pkg
