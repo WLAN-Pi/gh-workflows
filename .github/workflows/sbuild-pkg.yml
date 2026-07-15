@@ -46,7 +46,7 @@ jobs:
         run: |
           echo "filename=${{ inputs.pkg }}_${{ inputs.version }}~gha${{ env.date }}+${{ matrix.arch }}_${{ matrix.distro }}" >> $GITHUB_ENV
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: sbuild deb pkg for ${{ matrix.distro }}+${{ matrix.arch }}
         uses: wlan-pi/sbuild-debian-package@main
         id: build-debian-package
@@ -54,7 +54,7 @@ jobs:
           distro: ${{ matrix.distro }}
           arch: ${{ matrix.arch }}
       - name: Archive artifacts and upload to GitHub
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.filename }}
           path: ${{ steps.build-debian-package.outputs.deb-package }}
