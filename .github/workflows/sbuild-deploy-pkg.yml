@@ -18,7 +18,7 @@ on:
 jobs:
   sbuild-deploy-pkg:
     name: sbuild deploy pkg
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     environment: PACKAGECLOUD
     strategy:
       fail-fast: false
