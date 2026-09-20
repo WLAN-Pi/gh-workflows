@@ -11,6 +11,9 @@ on:
       version:
         description: "Formatted version string for use in a filename path"
         value: ${{ jobs.get_formatted_version_string.outputs.version }}
+permissions:
+  contents: read
+
 jobs:
   get_formatted_version_string:
     name: get formatted version string

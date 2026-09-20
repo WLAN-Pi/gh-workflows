@@ -15,6 +15,9 @@ on:
         required: false
         type: string
         default: '["trixie"]'
+permissions:
+  contents: read
+
 jobs:
   sbuild-pkg:
     name: sbuild pkg
