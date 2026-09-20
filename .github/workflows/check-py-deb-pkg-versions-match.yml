@@ -39,14 +39,14 @@ jobs:
             exit 1
           fi
           # Strip the debian revision (e.g., -1) for Python package version
-          PY_COMPAT_DEB_VERSION=$(echo $DEB_VERSION | sed -E 's/-.*//')
+          PY_COMPAT_DEB_VERSION=$(echo "$DEB_VERSION" | sed -E 's/-.*//')
           if [ -z "$PY_COMPAT_DEB_VERSION" ]; then
             echo "Error: failed to set PY_COMPAT_DEB_VERSION from DEB_VERSION"
             exit 1
           fi
-          echo "DEB_VERSION=$DEB_VERSION" >> $GITHUB_ENV
+          echo "DEB_VERSION=$DEB_VERSION" >> "$GITHUB_ENV"
           echo "Debian package version: $DEB_VERSION"
-          echo "PY_COMPAT_DEB_VERSION=$PY_COMPAT_DEB_VERSION" >> $GITHUB_ENV
+          echo "PY_COMPAT_DEB_VERSION=$PY_COMPAT_DEB_VERSION" >> "$GITHUB_ENV"
           echo "Formatted Python version: $PY_COMPAT_DEB_VERSION"
 
       - name: Check if Debian version is valid
@@ -61,14 +61,14 @@ jobs:
 
       - name: Get Python package version
         run: |
-          CURRENT_PY_VERSION=$(grep -oP '__version__\s*=\s*["'\'']\K(.*?)(?=["'\''])' ${{ inputs.python_version_file_path }})
+          CURRENT_PY_VERSION=$(grep -oP '__version__\s*=\s*["'\'']\K(.*?)(?=["'\''])' "${{ inputs.python_version_file_path }}")
 
           if [ -z "$CURRENT_PY_VERSION" ]; then
-            echo "Error: current Python package `__version__` value at ${{ inputs.python_version_file_path }} is an empty string."
+            echo "Error: current Python package '__version__' value at ${{ inputs.python_version_file_path }} is an empty string."
             exit 1
           fi
           echo "Python package version: $CURRENT_PY_VERSION"
-          echo "CURRENT_PY_VERSION=$CURRENT_PY_VERSION" >> $GITHUB_ENV
+          echo "CURRENT_PY_VERSION=$CURRENT_PY_VERSION" >> "$GITHUB_ENV"
 
       - name: Fail if ${{ inputs.python_version_file_path }} needs update
         id: check-version

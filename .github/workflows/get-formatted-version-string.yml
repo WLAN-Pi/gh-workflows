@@ -32,7 +32,7 @@ jobs:
             echo "Error: failed to parse or find version on the first line of debian/changelog"
             exit 1
           fi
-          echo "DEB_VERSION=$DEB_VERSION" >> $GITHUB_ENV
+          echo "DEB_VERSION=$DEB_VERSION" >> "$GITHUB_ENV"
           echo "Debian package version: $DEB_VERSION"
 
       - name: Check if Debian version is valid
