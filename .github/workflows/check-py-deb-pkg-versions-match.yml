@@ -32,14 +32,16 @@ jobs:
 
       - name: Extract Version from Debian changelog
         id: extract-version
+        env:
+          CHANGELOG: ${{ inputs.debian_changelog_file_path }}
         run: |
-          DEB_VERSION=$(head -n 1 debian/changelog | sed -E 's/.*\(([^)]+)\).*/\1/')
+          DEB_VERSION=$(head -n 1 "$CHANGELOG" | sed -E 's/.*\(([^)]+)\).*/\1/')
           if [ -z "$DEB_VERSION" ]; then
-            echo "Error: failed to parse or find version on the first line of debian/changelog"
+            echo "Error: failed to parse or find version on the first line of $CHANGELOG"
             exit 1
           fi
-          # Strip the debian revision (e.g., -1) for Python package version
-          PY_COMPAT_DEB_VERSION=$(echo "$DEB_VERSION" | sed -E 's/-.*//')
+          # Strip the epoch (e.g., 1:) and debian revision (e.g., -1) for Python package version
+          PY_COMPAT_DEB_VERSION=$(echo "$DEB_VERSION" | sed -E 's/^[0-9]+://; s/-.*//')
           if [ -z "$PY_COMPAT_DEB_VERSION" ]; then
             echo "Error: failed to set PY_COMPAT_DEB_VERSION from DEB_VERSION"
             exit 1
@@ -51,8 +53,7 @@ jobs:
 
       - name: Check if Debian version is valid
         run: |
-          debian_version_regex='^(\d+!)?[0-9][A-Za-z0-9.\+~:-]*(?:-[A-Za-z0-9.\+~]+)?$'
-          if ! echo "$DEB_VERSION" | grep -Eq "$debian_version_regex"; then
+          if ! dpkg --validate-version "$DEB_VERSION"; then
             echo "Error: Invalid Debian version format detected: $DEB_VERSION"
             exit 1
           else
