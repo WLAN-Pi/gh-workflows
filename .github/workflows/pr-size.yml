@@ -1,0 +1,76 @@
+name: PR size
+
+# Reports the PR's size. Without a "Review order" heading in the description,
+# warns above 500 changed lines and fails above 1,000. Policy:
+# https://github.com/WLAN-Pi/developers/blob/main/CONTRIBUTING.md#pr-size-and-scope
+#
+# Caller (include "edited" so fixing the description re-runs the check):
+#
+#   on:
+#     pull_request:
+#       types: [opened, edited, reopened, synchronize]
+#   permissions:
+#     contents: read
+#   jobs:
+#     pr-size:
+#       uses: WLAN-Pi/gh-workflows/.github/workflows/pr-size.yml@main
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  pr-size:
+    name: pr size
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check size and review order
+        env:
+          ADDITIONS: ${{ github.event.pull_request.additions }}
+          DELETIONS: ${{ github.event.pull_request.deletions }}
+          FILES: ${{ github.event.pull_request.changed_files }}
+          BODY: ${{ github.event.pull_request.body }}
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          if [ -z "$ADDITIONS" ]; then
+            echo "::error::Not a pull_request event; call this workflow from on: pull_request."
+            exit 1
+          fi
+          size=$((ADDITIONS + DELETIONS))
+          policy="https://github.com/WLAN-Pi/developers/blob/main/CONTRIBUTING.md#pr-size-and-scope"
+          echo "**$size changed lines** (+$ADDITIONS -$DELETIONS) across $FILES files." >> "$GITHUB_STEP_SUMMARY"
+
+          # Same-repo dev/main only; a fork's main is an ordinary contribution.
+          if [ "$HEAD_REPO" = "$REPO" ]; then
+            case "$HEAD_REF" in dev|main)
+              echo "Branch synchronization from \`$HEAD_REF\`; size check skipped." >> "$GITHUB_STEP_SUMMARY"
+              exit 0 ;;
+            esac
+          fi
+          if [ "$AUTHOR" = "dependabot[bot]" ]; then
+            echo "Dependabot PR; size check skipped." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [ "$size" -le 500 ]; then
+            exit 0
+          fi
+          # ATX heading "Review order" (optional trailing colon). ponytail: a
+          # heading inside a code fence also matches; parse Markdown if abused.
+          if printf '%s\n' "$BODY" | tr -d '\r' \
+              | grep -qiE '^ {0,3}#{1,6}[[:space:]]+review order[[:space:]]*:?[[:space:]#]*$'; then
+            echo "Review order section found." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          msg="Missing '## Review order' heading in the PR description ($size changed lines). Add one explaining why the change belongs together and what to read first. See $policy"
+          echo "$msg" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$size" -le 1000 ]; then
+            echo "::warning::$msg"
+            exit 0
+          fi
+          echo "::error::Over 1,000 lines. $msg"
+          exit 1
