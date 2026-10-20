@@ -1,5 +1,4 @@
 name: Tag release
-# Tags the deployed commit as v<upstream version> from debian/changelog.
 # Call it after the deploy job succeeds; the caller must grant contents: write.
 on:
   workflow_call:
