@@ -1,0 +1,60 @@
+name: Tag release
+# Call it after the deploy job succeeds; the caller must grant contents: write.
+on:
+  workflow_call:
+    inputs:
+      debian_changelog_file_path:
+        description: path to the debian changelog
+        required: false
+        type: string
+        default: debian/changelog
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    name: tag release
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-tags: true
+          fetch-depth: 1
+      - name: Create and push the tag
+        env:
+          CHANGELOG: ${{ inputs.debian_changelog_file_path }}
+        run: |
+          deb_version=$(head -n 1 "$CHANGELOG" | sed -E 's/.*\(([^)]+)\).*/\1/')
+          upstream=${deb_version#*:}
+          upstream=${upstream%-*}
+          upstream=${upstream//\~/-}
+          case "$upstream" in
+            [0-9]*) ;;
+            *) echo "::error::no version on the first line of $CHANGELOG"; exit 1 ;;
+          esac
+          tag="v$upstream"
+          if ! git check-ref-format "refs/tags/$tag"; then
+            echo "::error::$deb_version does not make a valid tag name ($tag)"
+            exit 1
+          fi
+          if git show-ref -q --verify "refs/tags/$tag"; then
+            existing=$(git rev-parse "refs/tags/$tag^{}")
+            if [ "$existing" != "$GITHUB_SHA" ]; then
+              echo "::warning::$tag already exists on $existing; not moving it to $GITHUB_SHA"
+            fi
+            echo "$tag already exists; nothing to do." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$tag" -m "Release $deb_version" "$GITHUB_SHA"
+          if ! git push origin "refs/tags/$tag"; then
+            if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; then
+              echo "$tag was pushed by another run; nothing to do." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            exit 1
+          fi
+          echo "Tagged $GITHUB_SHA as $tag." >> "$GITHUB_STEP_SUMMARY"
