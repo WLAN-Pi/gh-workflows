@@ -35,9 +35,6 @@ jobs:
           DELETIONS: ${{ github.event.pull_request.deletions }}
           FILES: ${{ github.event.pull_request.changed_files }}
           BODY: ${{ github.event.pull_request.body }}
-          HEAD_REF: ${{ github.head_ref }}
-          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
-          REPO: ${{ github.repository }}
           AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
           if [ -z "$ADDITIONS" ]; then
@@ -48,13 +45,6 @@ jobs:
           policy="https://github.com/WLAN-Pi/developers/blob/main/CONTRIBUTING.md#pr-size-and-scope"
           echo "**$size changed lines** (+$ADDITIONS -$DELETIONS) across $FILES files." >> "$GITHUB_STEP_SUMMARY"
 
-          # Same-repo dev/main only; a fork's main is an ordinary contribution.
-          if [ "$HEAD_REPO" = "$REPO" ]; then
-            case "$HEAD_REF" in dev|main)
-              echo "Branch synchronization from \`$HEAD_REF\`; size check skipped." >> "$GITHUB_STEP_SUMMARY"
-              exit 0 ;;
-            esac
-          fi
           if [ "$AUTHOR" = "dependabot[bot]" ]; then
             echo "Dependabot PR; size check skipped." >> "$GITHUB_STEP_SUMMARY"
             exit 0
