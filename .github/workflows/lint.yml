@@ -61,6 +61,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Install PyYAML
+        run: sudo apt-get update && sudo apt-get install -y python3-yaml
+
       - name: Run version check cases
         run: tests/check-py-deb-pkg-versions-match-test.sh
 

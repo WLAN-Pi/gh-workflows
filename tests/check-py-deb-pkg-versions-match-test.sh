@@ -14,7 +14,7 @@ failures=0
 expect() {
   local want=$1 deb=$2 py=$3 got
   if DEB_VERSION=$deb CURRENT_PY_VERSION=$py CHANGELOG=debian/changelog VERSION_FILE=__version__.py \
-    bash -c "$step" >/dev/null 2>&1; then got=pass; else got=fail; fi
+    bash -e -o pipefail -c "$step" >/dev/null 2>&1; then got=pass; else got=fail; fi
   if [ "$got" != "$want" ]; then
     echo "FAIL: changelog '$deb', __version__ '$py': want $want, got $got"
     failures=$((failures + 1))
@@ -46,6 +46,13 @@ expect pass 1.0.2-2 1.0.2.post1
 expect pass 1.0.8-4 1.0.8-4
 expect pass 1.0.4+nmu1 1.0.4
 expect pass 1.0.0+b1 1.0.0
+expect pass 1.0.0~rc1-1 1.0.0rc-1
+expect pass 1.0.0~beta2-1 1.0.0beta-2
+expect pass 1.0.0~rc1-1 1.0.0rc1post2
+expect pass 1.0.0~rc1-1 1.0.0rc1.dev3
+expect pass 1.4.0~beta-1 1.4.0b0
+expect pass 1:1.2.0-1 '1!1.2.0'
+expect pass 1:1.2.0~rc1-1 '1!1.2.0rc1'
 expect pass 1.0.0-custom1 1.0.0
 
 if [ "$failures" -ne 0 ]; then
