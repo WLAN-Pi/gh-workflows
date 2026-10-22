@@ -80,9 +80,7 @@ jobs:
           base_version() {
             printf '%s\n' "$1" | sed -E 's/^[0-9]+://; s/([0-9]+\.[0-9]+\.[0-9]+).*/\1/'
           }
-          # a, b or rc right after major.minor.patch, PEP 440 spellings normalized
-          # (beta3, -b3, ~b3 -> b3). Debian revisions, ~dev snapshots and .postN are ignored.
-          pre_release() {
+          pep440_pre_release() {
             printf '%s\n' "$1" | sed -E 's/^[0-9]+://' | tr '[:upper:]' '[:lower:]' |
               sed -nE 's/^[0-9]+\.[0-9]+\.[0-9]+[-~._]?(alpha|beta|preview|pre|rc|a|b|c)[._]?([0-9]*)([^a-z].*)?$/\1 \2/p' |
               sed -E 's/^alpha/a/; s/^beta/b/; s/^(preview|pre|c) /rc /; s/ $/ 0/; s/ 0*([0-9])/\1/'
@@ -90,8 +88,8 @@ jobs:
 
           BASE_PY_VERSION=$(base_version "$CURRENT_PY_VERSION")
           BASE_DEB_VERSION=$(base_version "$DEB_VERSION")
-          PRE_PY_VERSION=$(pre_release "$CURRENT_PY_VERSION")
-          PRE_DEB_VERSION=$(pre_release "$DEB_VERSION")
+          PRE_PY_VERSION=$(pep440_pre_release "$CURRENT_PY_VERSION")
+          PRE_DEB_VERSION=$(pep440_pre_release "$DEB_VERSION")
 
           echo "Python version: $BASE_PY_VERSION, pre-release: ${PRE_PY_VERSION:-none}"
           echo "Debian version: $BASE_DEB_VERSION, pre-release: ${PRE_DEB_VERSION:-none}"
