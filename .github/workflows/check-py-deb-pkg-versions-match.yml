@@ -73,19 +73,33 @@ jobs:
 
       - name: Fail if ${{ inputs.python_version_file_path }} needs update
         id: check-version
+        env:
+          CHANGELOG: ${{ inputs.debian_changelog_file_path }}
+          VERSION_FILE: ${{ inputs.python_version_file_path }}
         run: |
-          # Extract major.minor.patch from both versions using sed
-          BASE_PY_VERSION=$(echo "$CURRENT_PY_VERSION" | sed -E 's/([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
-          BASE_DEB_VERSION=$(echo "$PY_COMPAT_DEB_VERSION" | sed -E 's/([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
-          
-          echo "Base Python version (major.minor.patch): $BASE_PY_VERSION"
-          echo "Base Debian version (major.minor.patch): $BASE_DEB_VERSION"
-          
-          if [ "$BASE_PY_VERSION" != "$BASE_DEB_VERSION" ]; then
-            echo "Compatible Python package version parsed from ${{ inputs.debian_changelog_file_path }}: $PY_COMPAT_DEB_VERSION"
-            echo "Current version detected from ${{ inputs.python_version_file_path }}: $CURRENT_PY_VERSION"
-            echo "Error: major.minor.patch versions in debian/changelog and ${{ inputs.python_version_file_path }} do not match."
+          base_version() {
+            printf '%s\n' "$1" | sed -E 's/^[0-9]+://; s/([0-9]+\.[0-9]+\.[0-9]+).*/\1/'
+          }
+          # a, b or rc right after major.minor.patch, PEP 440 spellings normalized
+          # (beta3, -b3, ~b3 -> b3). Debian revisions, ~dev snapshots and .postN are ignored.
+          pre_release() {
+            printf '%s\n' "$1" | sed -E 's/^[0-9]+://' | tr '[:upper:]' '[:lower:]' |
+              sed -nE 's/^[0-9]+\.[0-9]+\.[0-9]+[-~._]?(alpha|beta|preview|pre|rc|a|b|c)[._]?([0-9]*)([^a-z].*)?$/\1 \2/p' |
+              sed -E 's/^alpha/a/; s/^beta/b/; s/^(preview|pre|c) /rc /; s/ $/ 0/; s/ 0*([0-9])/\1/'
+          }
+
+          BASE_PY_VERSION=$(base_version "$CURRENT_PY_VERSION")
+          BASE_DEB_VERSION=$(base_version "$DEB_VERSION")
+          PRE_PY_VERSION=$(pre_release "$CURRENT_PY_VERSION")
+          PRE_DEB_VERSION=$(pre_release "$DEB_VERSION")
+
+          echo "Python version: $BASE_PY_VERSION, pre-release: ${PRE_PY_VERSION:-none}"
+          echo "Debian version: $BASE_DEB_VERSION, pre-release: ${PRE_DEB_VERSION:-none}"
+
+          if [ "$BASE_PY_VERSION" != "$BASE_DEB_VERSION" ] || [ "$PRE_PY_VERSION" != "$PRE_DEB_VERSION" ]; then
+            echo "Version in $CHANGELOG: $DEB_VERSION"
+            echo "Version in $VERSION_FILE: $CURRENT_PY_VERSION"
+            echo "Error: major.minor.patch or pre-release (a, b, rc) in $CHANGELOG and $VERSION_FILE do not match."
             exit 1
-          else
-            echo "Base versions match (major.minor.patch). Additional version components and metadata ignored."
           fi
+          echo "Versions match. Debian revision, dev snapshot and post-release parts are ignored."
