@@ -1,0 +1,133 @@
+name: Post Workflow Status to Discord
+
+on:
+  workflow_call:
+    inputs:
+      parent_run_id:
+        required: true
+        type: string
+      title:
+        required: false
+        type: string
+        default: ""
+    secrets:
+      DISCORD_WEBHOOK_URL:
+        required: false
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  post:
+    name: Post Workflow Status to Discord
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Post workflow status to Discord
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          PARENT_RUN_ID: ${{ inputs.parent_run_id }}
+          TITLE: ${{ inputs.title }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${DISCORD_WEBHOOK_URL:-}" ]; then
+            echo "::notice::DISCORD_WEBHOOK_URL is not set; skipping Discord notification"
+            exit 0
+          fi
+
+          if [ -z "${PARENT_RUN_ID:-}" ]; then
+            echo "::error::parent_run_id is required"
+            exit 1
+          fi
+
+          repository="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required}"
+
+          run_json="$(gh api "repos/${repository}/actions/runs/${PARENT_RUN_ID}")"
+          jobs_json="$(gh api --paginate "repos/${repository}/actions/runs/${PARENT_RUN_ID}/jobs" --jq '.jobs[]' | jq -s '.')"
+
+          payload="$(
+            jq -n \
+              --argjson run "${run_json}" \
+              --argjson jobs "${jobs_json}" \
+              --arg title "${TITLE:-}" \
+              --arg repository "${repository}" \
+              '
+              def is_status:
+                (.name | test("^Post Workflow Status to Discord"));
+              def is_unsuccessful:
+                .conclusion == "failure" or .conclusion == "cancelled" or .conclusion == "timed_out";
+              def clip($n):
+                if length > $n then .[:$n] else . end;
+              def workflow_jobs:
+                [$jobs[] | select(is_status | not)];
+              def result:
+                if any(workflow_jobs[]; is_unsuccessful) then "failure" else "success" end;
+              def job_field:
+                {
+                  name: (.name | clip(256)),
+                  value: (.conclusion // .status // "unknown"),
+                  inline: true
+                };
+              def overflow_field($rest):
+                {
+                  name: "More jobs",
+                  value: ([$rest[] | "\(.name): \(.conclusion // .status // "unknown")"] | join("\n") | clip(1024)),
+                  inline: false
+                };
+              def job_fields:
+                workflow_jobs
+                | if length <= 23 then map(job_field)
+                  else (.[0:22] | map(job_field)) + [overflow_field(.[22:])]
+                  end;
+              def shortsha:
+                ($run.head_sha // "")[:7];
+              def branch:
+                $run.head_branch // "unknown";
+              def actor:
+                $run.triggering_actor.login // $run.actor.login // "unknown";
+              def event:
+                $run.event // "unknown";
+              def embed_title:
+                (if $title != "" then $title else "\($repository): \($run.name // "workflow")" end) | clip(256);
+              def color:
+                if result == "success" then 5763719 else 15548997 end;
+              {
+                embeds: [
+                  {
+                    title: embed_title,
+                    url: $run.html_url,
+                    color: color,
+                    fields: (
+                      job_fields
+                      + [
+                        {name: "Branch", value: "\(branch)@\(shortsha)", inline: true},
+                        {name: "Triggered by", value: "\(actor) (\(event))", inline: true}
+                      ]
+                    )
+                  }
+                ]
+              }
+              '
+          )"
+
+          case "${DISCORD_WEBHOOK_URL}" in
+            *\?*) post_url="${DISCORD_WEBHOOK_URL}&wait=true" ;;
+            *) post_url="${DISCORD_WEBHOOK_URL}?wait=true" ;;
+          esac
+
+          set +e
+          response="$(curl --fail-with-body --silent --show-error --max-time 30 \
+            -H "Content-Type: application/json" \
+            --data-binary "${payload}" \
+            "${post_url}")"
+          curl_status=$?
+          set -e
+
+          if [ "${curl_status}" -ne 0 ]; then
+            echo "::error::Discord webhook post failed"
+            printf '%s\n' "${response}"
+            exit 1
+          fi
