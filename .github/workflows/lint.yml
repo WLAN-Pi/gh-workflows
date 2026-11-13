@@ -74,7 +74,7 @@ jobs:
       - shellcheck
       - actionlint
       - version-check-test
-    uses: WLAN-Pi/gh-workflows/.github/workflows/discord-workflow-status.yml@main
+    uses: ./.github/workflows/discord-workflow-status.yml
     permissions:
       actions: read
       contents: read
